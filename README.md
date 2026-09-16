@@ -1,8 +1,9 @@
 # MDconverter
 
-Ferramenta local e offline para converter **PDF ⇄ Markdown**, com um
-layout de PDF cuidado (tipografia, cores, tabelas, blocos de codigo,
-numeracao de pagina).
+Ferramenta local e offline para converter **PDF ⇄ Markdown** (e tambem
+Word, Excel/CSV, HTML, TXT e RTF → Markdown), com um layout de PDF
+cuidado (tipografia, cores, tabelas, blocos de codigo, numeracao de
+pagina).
 
 Motivacao: enviar `.md` para uma LLM consome muito menos tokens do que
 enviar `.pdf`, e quando alguem pede um documento "bonito" para ler, e
@@ -25,7 +26,11 @@ MDconverter/
 │   ├── convert.py         <- junta TODOS os pdfs da raiz em 1 unico .md
 │   ├── run.bat / run.sh
 │   └── MDs/               <- saida: .md combinado + PDFs originais movidos para ca
-├── watch_all.py           <- monitor unico: fica na raiz observando as 3 pastas acima
+├── ALLtoMD/              <- solte pdf/docx/xlsx/csv/html/txt/rtf aqui
+│   ├── convert.py         <- 1 arquivo (qualquer formato acima) -> 1 .md
+│   ├── run.bat / run.sh
+│   └── MDs/               <- saida: .md gerado + arquivo original movidos para ca
+├── watch_all.py           <- monitor unico: fica na raiz observando as 4 pastas acima
 ├── watch_all.bat / .sh
 ├── mdconverter/           <- pacote com a logica de conversao (compartilhada)
 ├── requirements.txt
@@ -54,6 +59,8 @@ Isso instala:
 - `weasyprint` — motor principal de geracao de PDF (melhor tipografia).
 - `xhtml2pdf` — motor de fallback, puro Python, usado automaticamente se o
   WeasyPrint nao conseguir carregar (ex.: falta o runtime do GTK no Windows).
+- `python-docx`, `openpyxl`, `markdownify`, `striprtf` — usados pelo
+  `ALLtoMD/` para ler `.docx`, `.xlsx`, `.html` e `.rtf`.
 
 > **Nota Windows/WeasyPrint:** o WeasyPrint depende de bibliotecas nativas
 > (Pango/Cairo/GDK-Pixbuf). Se voce nao instalar o
@@ -91,18 +98,31 @@ exemplo, para mandar tudo de uma vez para uma LLM):
    `allPDFtoMD/MDs/`. Cada PDF vira uma secao `## <nome do arquivo>`
    dentro do Markdown final, na ordem alfabetica dos nomes de arquivo.
 
+### Outros formatos → Markdown (ALLtoMD)
+
+Quando o arquivo nao e PDF: `.docx`, `.xlsx`/`.csv`, `.html`/`.htm`,
+`.txt` ou `.rtf` (PDF tambem funciona aqui, se quiser misturar tudo na
+mesma pasta).
+
+1. Coloque os arquivos na raiz de `ALLtoMD/`.
+2. Rode `ALLtoMD/run.bat`, `ALLtoMD/run.sh` ou `python ALLtoMD/convert.py`.
+3. Um `.md` para cada arquivo (planilhas viram tabelas Markdown, Word
+   preserva titulos/listas/tabelas) e os arquivos originais aparecem em
+   `ALLtoMD/MDs/`.
+
 ### Monitor único (watch_all)
 
 Em vez de entrar em cada pasta e rodar o conversor manualmente, de dois
 cliques em `watch_all.bat` (Windows) ou rode `watch_all.sh` /
 `python watch_all.py` (Linux/Mac). Ele fica na raiz do projeto,
-verificando `MDtoPDF/`, `PDFtoMD/` e `allPDFtoMD/` a cada poucos segundos
-e converte automaticamente qualquer arquivo novo que aparecer em alguma
-delas — basta jogar os arquivos nas pastas certas e esperar.
+verificando `MDtoPDF/`, `PDFtoMD/`, `allPDFtoMD/` e `ALLtoMD/` a cada
+poucos segundos e converte automaticamente qualquer arquivo novo que
+aparecer em alguma delas — basta jogar os arquivos nas pastas certas e
+esperar.
 
 ```bash
 python watch_all.py               # fica rodando, checa a cada 3s (Ctrl+C para parar)
-python watch_all.py --once        # roda uma unica passada nas 3 pastas e sai
+python watch_all.py --once        # roda uma unica passada nas 4 pastas e sai
 python watch_all.py --interval 10 # muda o intervalo de checagem
 ```
 
@@ -115,9 +135,10 @@ pip install pyinstaller
 python build_executables.py
 ```
 
-Isso gera `MDtoPDF/MDtoPDF.exe` e `PDFtoMD/PDFtoMD.exe` (ou binarios sem
-extensao no Linux/Mac). Precisa ser rodado no mesmo sistema operacional
-de destino (o PyInstaller nao faz cross-compilation).
+Isso gera um `.exe` (ou binario sem extensao no Linux/Mac) dentro de cada
+pasta (`MDtoPDF/`, `PDFtoMD/`, `allPDFtoMD/`, `ALLtoMD/`) e um `watch_all`
+na raiz. Precisa ser rodado no mesmo sistema operacional de destino (o
+PyInstaller nao faz cross-compilation).
 
 ## Limitacoes conhecidas (PDF → Markdown)
 
@@ -146,3 +167,18 @@ numeros de pagina/rodape filtrados automaticamente. Ainda assim:
 > titulos, listas aninhadas, tabelas, blocos de codigo com indentacao e
 > acentuacao (ç, ã, é, ü) ida e volta (.md → PDF → .md) e comparando o
 > resultado.
+
+## Limitacoes conhecidas (ALLtoMD)
+
+- `.docx`: paragrafos, titulos (estilos "Heading 1-6"), listas e tabelas
+  sao convertidos; imagens, caixas de texto e formatacao de caractere
+  (negrito/italico dentro do paragrafo) nao sao preservados nesta
+  primeira versao.
+- `.xlsx`: cada aba vira uma tabela Markdown; formulas sao lidas pelo
+  valor calculado (nao pela formula em si); formatacao visual (cores,
+  graficos) nao e preservada.
+- `.html`: convertido via `markdownify`, que cobre bem HTML "de
+  documento" (textos, listas, tabelas, links); paginas muito dependentes
+  de JavaScript/CSS para exibir conteudo podem sair incompletas.
+- `.rtf`: extrai o texto; formatacao rica (cores, fontes) nao e
+  preservada.

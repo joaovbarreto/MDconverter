@@ -18,13 +18,14 @@ ConvertFn = Callable[[Path, Path], object]
 def process_folder(
     root: Path,
     output_dir: Path,
-    source_suffix: str,
+    source_suffix: str | tuple[str, ...],
     target_suffix: str,
     convert_fn: ConvertFn,
     label: str,
     announce_empty: bool = True,
 ) -> int:
-    """Converte todo arquivo `*source_suffix` na raiz de `root`.
+    """Converte todo arquivo com uma das extensoes em `source_suffix` na
+    raiz de `root` (aceita uma unica extensao ou uma tupla de extensoes).
 
     O arquivo de saida e escrito em `output_dir`, e o arquivo de origem e
     movido para `output_dir` logo apos uma conversao bem-sucedida.
@@ -32,13 +33,14 @@ def process_folder(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    suffixes = (source_suffix,) if isinstance(source_suffix, str) else source_suffix
     source_files = sorted(
-        p for p in root.iterdir() if p.is_file() and p.suffix.lower() == source_suffix
+        p for p in root.iterdir() if p.is_file() and p.suffix.lower() in suffixes
     )
 
     if not source_files:
         if announce_empty:
-            print(f"[{label}] Nenhum arquivo {source_suffix} encontrado em {root}.")
+            print(f"[{label}] Nenhum arquivo {'/'.join(suffixes)} encontrado em {root}.")
         return 0
 
     print(f"[{label}] {len(source_files)} arquivo(s) encontrado(s). Convertendo...\n")

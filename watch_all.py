@@ -2,7 +2,7 @@
 """Monitor unico do MDconverter.
 
 Fica rodando na raiz do repositorio e observa TODAS as pastas de
-conversao (MDtoPDF/, PDFtoMD/, allPDFtoMD/, e quaisquer outras
+conversao (MDtoPDF/, PDFtoMD/, allPDFtoMD/, ALLtoMD/, e quaisquer outras
 registradas em mdconverter.jobs.ALL_JOBS), rodando a conversao
 automaticamente assim que aparece um arquivo novo -- sem precisar entrar
 em cada pasta e rodar o convert.py na mao.
@@ -31,7 +31,7 @@ def run_once() -> int:
 
 
 def watch(interval: float) -> None:
-    print("MDconverter - monitorando MDtoPDF/, PDFtoMD/ e allPDFtoMD/")
+    print("MDconverter - monitorando MDtoPDF/, PDFtoMD/, allPDFtoMD/ e ALLtoMD/")
     print(f"Checando a cada {interval:.0f}s. Ctrl+C para parar.\n")
     try:
         while True:

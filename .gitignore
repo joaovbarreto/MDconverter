@@ -16,3 +16,13 @@ PDFtoMD/MDs/*
 allPDFtoMD/*.pdf
 allPDFtoMD/MDs/*
 !allPDFtoMD/MDs/.gitkeep
+ALLtoMD/*.pdf
+ALLtoMD/*.docx
+ALLtoMD/*.xlsx
+ALLtoMD/*.csv
+ALLtoMD/*.html
+ALLtoMD/*.htm
+ALLtoMD/*.txt
+ALLtoMD/*.rtf
+ALLtoMD/MDs/*
+!ALLtoMD/MDs/.gitkeep

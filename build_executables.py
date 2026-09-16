@@ -9,8 +9,8 @@ faz cross-compilation).
 Uso:
     python build_executables.py
 
-O binario final e copiado para dentro de MDtoPDF/, PDFtoMD/, allPDFtoMD/
-e da raiz (watch_all), prontos para uso (basta apagar/ignorar o
+O binario final e copiado para dentro de MDtoPDF/, PDFtoMD/, allPDFtoMD/,
+ALLtoMD/ e da raiz (watch_all), prontos para uso (basta apagar/ignorar o
 convert.py / watch_all.py se preferir usar so o executavel).
 """
 
@@ -26,6 +26,7 @@ TARGETS = [
     ("MDtoPDF", ROOT / "MDtoPDF" / "convert.py", "MDtoPDF"),
     ("PDFtoMD", ROOT / "PDFtoMD" / "convert.py", "PDFtoMD"),
     ("allPDFtoMD", ROOT / "allPDFtoMD" / "convert.py", "allPDFtoMD"),
+    ("ALLtoMD", ROOT / "ALLtoMD" / "convert.py", "ALLtoMD"),
     ("watch_all", ROOT / "watch_all.py", "."),
 ]
 

@@ -1,10 +1,10 @@
 """Definicoes dos "trabalhos" de conversao.
 
 Cada funcao aqui processa a raiz de uma das pastas (MDtoPDF/, PDFtoMD/,
-allPDFtoMD/) e retorna quantos arquivos converteu. Sao usadas tanto pelos
-executaveis individuais (`MDtoPDF/convert.py`, etc.) quanto pelo monitor
-unico (`watch_all.py`, na raiz do repositorio), que roda todas elas em
-loop.
+allPDFtoMD/, ALLtoMD/) e retorna quantos arquivos converteu. Sao usadas
+tanto pelos executaveis individuais (`MDtoPDF/convert.py`, etc.) quanto
+pelo monitor unico (`watch_all.py`, na raiz do repositorio), que roda
+todas elas em loop.
 """
 
 from __future__ import annotations
@@ -13,6 +13,8 @@ import datetime as dt
 import shutil
 from pathlib import Path
 
+from .all_to_md import SUPPORTED_SUFFIXES as ALL_TO_MD_SUFFIXES
+from .all_to_md import convert_any_to_md
 from .folder_runner import avoid_overwrite, process_folder
 from .md_to_pdf import convert_markdown_file
 from .pdf_to_md import convert_pdf_file, merge_pdfs_to_markdown
@@ -81,4 +83,26 @@ def run_all_pdf_to_md(announce_empty: bool = True) -> int:
     return len(pdf_files)
 
 
-ALL_JOBS = (run_md_to_pdf, run_pdf_to_md, run_all_pdf_to_md)
+def run_all_to_md(announce_empty: bool = True) -> int:
+    """Converte qualquer arquivo suportado (PDF, .docx, .xlsx, .csv, .html,
+    .txt, .rtf) solto na raiz de ALLtoMD/ para Markdown, um .md por arquivo.
+    """
+    root = REPO_ROOT / "ALLtoMD"
+
+    def dispatch(src: Path, dest: Path) -> str:
+        if src.suffix.lower() == ".pdf":
+            return f"{convert_pdf_file(src, dest)} pagina(s)"
+        return convert_any_to_md(src, dest)
+
+    return process_folder(
+        root=root,
+        output_dir=root / "MDs",
+        source_suffix=ALL_TO_MD_SUFFIXES,
+        target_suffix=".md",
+        convert_fn=dispatch,
+        label="ALLtoMD",
+        announce_empty=announce_empty,
+    )
+
+
+ALL_JOBS = (run_md_to_pdf, run_pdf_to_md, run_all_pdf_to_md, run_all_to_md)
