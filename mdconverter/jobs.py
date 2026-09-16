@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import datetime as dt
 import shutil
-import sys
-import traceback
 from pathlib import Path
 
 from .folder_runner import avoid_overwrite, process_folder
@@ -71,7 +69,8 @@ def run_all_pdf_to_md(announce_empty: bool = True) -> int:
         total_pages = merge_pdfs_to_markdown(pdf_files, dest)
     except Exception as exc:  # noqa: BLE001 - segue sem travar o monitor
         print(f"\n[allPDFtoMD] ERRO ao combinar os PDFs: {exc}")
-        traceback.print_exc(file=sys.stdout)
+        if dest.exists():
+            dest.unlink()
         return 0
 
     for src in pdf_files:

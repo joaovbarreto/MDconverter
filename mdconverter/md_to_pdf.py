@@ -56,6 +56,7 @@ def _markdown_to_html(markdown_text: str, title: str, css_path: Path) -> str:
         extensions=_MD_EXTENSIONS,
         extension_configs=_MD_EXTENSION_CONFIG,
         output_format="html5",
+        tab_length=2,
     )
     body_html = md.convert(markdown_text)
     css = css_path.read_text(encoding="utf-8")

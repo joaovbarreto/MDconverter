@@ -9,8 +9,6 @@ saida (PDFs/ ou MDs/), deixando a raiz limpa para o proximo lote.
 from __future__ import annotations
 
 import shutil
-import sys
-import traceback
 from pathlib import Path
 from typing import Callable
 
@@ -58,7 +56,8 @@ def process_folder(
             ok += 1
         except Exception as exc:  # noqa: BLE001 - queremos seguir para o proximo arquivo
             print(f"  ERRO {src.name}: {exc}")
-            traceback.print_exc(file=sys.stdout)
+            if dest.exists():
+                dest.unlink()  # nao deixa PDF/MD incompleto para tras
             failed += 1
 
     print(f"\n[{label}] Concluido: {ok} convertido(s), {failed} com erro.")

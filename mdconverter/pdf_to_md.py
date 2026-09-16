@@ -20,8 +20,10 @@ from pathlib import Path
 
 import fitz  # PyMuPDF
 
-_BULLET_PREFIXES = ("- ", "* ", "• ", "● ", "▪ ")
-_BULLET_ONLY_RE = re.compile(r"^[\-\*•●○▪■❖‣∙·]+$")
+_BULLET_PREFIXES = ("- ", "* ", "• ", "● ", "▪ ", "◦ ", "○ ", "▫ ")
+_BULLET_ONLY_RE = re.compile(r"^[\-\*•●○◦▪▫■❖‣∙·]+$")
+_BULLET_STRIP_CHARS = "-*•●○◦▪▫ "
+_ORDERED_LIST_RE = re.compile(r"^(\d{1,3})[.)]\s+(.*)$")
 _PAGE_NUMBER_RE = re.compile(
     r"^\s*(p[aá]gina|page|pg\.?)?\s*\d{1,4}\s*(/|de|of)?\s*\d{0,4}\s*$",
     re.IGNORECASE,
@@ -131,9 +133,12 @@ def _page_to_markdown(page: "fitz.Page", body_size: float) -> str:
     footer_zone = page_height * 0.93
     header_zone = page_height * 0.06
 
-    out_lines: list[str] = []
-    code_buffer: list[str] = []
-    pending_bullet = False
+    # Junta linhas de texto e tabelas num unico fluxo de eventos ordenado
+    # pela posicao vertical, para que as tabelas apareçam no meio do texto
+    # (onde estavam no PDF) em vez de sempre irem parar no final da pagina.
+    events: list[tuple[float, int, str, object]] = []
+    for table_rect, table_md in tables:
+        events.append((table_rect.y0, 0, "table", table_md))
 
     blocks = page.get_text("dict")["blocks"]
     for block in blocks:
@@ -141,52 +146,88 @@ def _page_to_markdown(page: "fitz.Page", body_size: float) -> str:
             continue
         block_rect = fitz.Rect(block["bbox"])
         if any(block_rect.intersects(rect) for rect in table_rects):
-            continue  # sera inserido separadamente, na posicao das tabelas
+            continue  # sera inserida como evento "table" separadamente
 
         for line in block["lines"]:
             text, size, is_bold, is_mono = _line_to_text(line)
             if not text:
                 continue
+            events.append((line["bbox"][1], 1, "line", (text, size, is_bold, is_mono, line["bbox"][0])))
 
-            line_top = line["bbox"][1]
-            if (line_top >= footer_zone or line_top <= header_zone) and _PAGE_NUMBER_RE.match(text):
-                continue  # provavel numero de pagina / cabecalho repetido
+    events.sort(key=lambda e: (e[0], e[1]))
 
-            if _BULLET_ONLY_RE.match(text):
-                pending_bullet = True
-                continue
+    out_lines: list[str] = []
+    code_buffer: list[str] = []
+    pending_bullet = False
+    code_base_x0: float | None = None
+    list_stack: list[float] = []  # x0 de cada nivel de lista ativo
 
-            if not is_mono:
-                _flush_code_buffer(out_lines, code_buffer)
+    def list_indent(x0: float) -> str:
+        while list_stack and x0 < list_stack[-1] - 2:
+            list_stack.pop()
+        if not list_stack or x0 > list_stack[-1] + 2:
+            list_stack.append(x0)
+        return "  " * (len(list_stack) - 1)
 
-            level = 0 if is_mono else _heading_level(size, body_size)
-            if level:
-                out_lines.append(f"\n{'#' * level} {text}\n")
-                pending_bullet = False
-                continue
+    for y0, _, kind, payload in events:
+        if kind == "table":
+            _flush_code_buffer(out_lines, code_buffer)
+            code_base_x0 = None
+            pending_bullet = False
+            list_stack = []
+            out_lines.append("\n" + payload + "\n")
+            continue
 
-            if is_mono:
-                code_buffer.append(text)
-                continue
+        text, size, is_bold, is_mono, x0 = payload
 
-            stripped = text.lstrip()
-            if pending_bullet or stripped[:2] in _BULLET_PREFIXES or (
-                stripped[:1] in ("-", "*") and stripped[1:2] == " "
-            ):
-                out_lines.append(f"- {stripped.lstrip('-*•●▪ ').strip()}")
-                pending_bullet = False
-                continue
+        if (y0 >= footer_zone or y0 <= header_zone) and _PAGE_NUMBER_RE.match(text):
+            continue  # provavel numero de pagina / cabecalho repetido
 
-            if is_bold:
-                out_lines.append(f"**{text}**")
-            else:
-                out_lines.append(text)
+        if _BULLET_ONLY_RE.match(text):
+            pending_bullet = True
+            continue
+
+        if not is_mono:
+            _flush_code_buffer(out_lines, code_buffer)
+            code_base_x0 = None
+
+        heading_lvl = 0 if is_mono else _heading_level(size, body_size)
+        if heading_lvl:
+            out_lines.append(f"\n{'#' * heading_lvl} {text}\n")
+            pending_bullet = False
+            list_stack = []
+            continue
+
+        if is_mono:
+            if code_base_x0 is None:
+                code_base_x0 = x0
+            char_width = max(size * 0.55, 1.0)
+            indent = max(0, round((x0 - code_base_x0) / char_width))
+            code_buffer.append(" " * indent + text)
+            continue
+
+        stripped = text.lstrip()
+        ordered_match = _ORDERED_LIST_RE.match(stripped)
+        if ordered_match:
+            num, rest = ordered_match.groups()
+            out_lines.append(f"{list_indent(x0)}{num}. {rest.strip()}")
+            pending_bullet = False
+            continue
+
+        if pending_bullet or stripped[:2] in _BULLET_PREFIXES or (
+            stripped[:1] in ("-", "*") and stripped[1:2] == " "
+        ):
+            out_lines.append(f"{list_indent(x0)}- {stripped.lstrip(_BULLET_STRIP_CHARS).strip()}")
+            pending_bullet = False
+            continue
+
+        list_stack = []
+        if is_bold:
+            out_lines.append(f"**{text}**")
+        else:
+            out_lines.append(text)
 
     _flush_code_buffer(out_lines, code_buffer)
-
-    # Insere as tabelas ao final do texto da pagina, na ordem em que aparecem.
-    for _, table_md in tables:
-        out_lines.append("\n" + table_md + "\n")
 
     return "\n".join(out_lines)
 
@@ -224,12 +265,14 @@ def _merge_paragraphs(raw_lines: str) -> str:
             flush()
             i += 1
             continue
-        if stripped.startswith("-"):
+        if stripped.startswith("-") or _ORDERED_LIST_RE.match(stripped):
             flush()
-            list_lines = [stripped]
+            list_lines = [line.rstrip()]
             i += 1
-            while i < len(lines) and lines[i].strip().startswith("-"):
-                list_lines.append(lines[i].strip())
+            while i < len(lines) and (
+                lines[i].strip().startswith("-") or _ORDERED_LIST_RE.match(lines[i].strip())
+            ):
+                list_lines.append(lines[i].rstrip())
                 i += 1
             paragraphs.append("\n".join(list_lines))
             continue
@@ -297,7 +340,11 @@ def merge_pdfs_to_markdown(input_paths: list[Path], output_path: Path) -> int:
     sections = []
     total_pages = 0
     for path in input_paths:
-        markdown_text, page_count = extract_markdown(path)
+        try:
+            markdown_text, page_count = extract_markdown(path)
+        except Exception as exc:  # noqa: BLE001 - um PDF ruim nao deve travar o lote inteiro
+            sections.append(f"## {path.stem}\n\n_Nao foi possivel converter este arquivo: {exc}_")
+            continue
         total_pages += page_count
         sections.append(f"## {path.stem}\n\n{markdown_text}".strip())
 

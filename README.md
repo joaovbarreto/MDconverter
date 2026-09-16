@@ -122,16 +122,27 @@ de destino (o PyInstaller nao faz cross-compilation).
 ## Limitacoes conhecidas (PDF → Markdown)
 
 A extracao de PDF e heuristica (baseada em tamanho de fonte, negrito e
-posicao do texto), entao:
+posicao do texto). Testado e funcionando bem: titulos por tamanho de
+fonte, listas com marcador (incluindo listas aninhadas, por indentacao),
+listas numeradas, tabelas na posicao correta do documento, blocos de
+codigo (com indentacao preservada, via deteccao de fonte monoespaçada) e
+numeros de pagina/rodape filtrados automaticamente. Ainda assim:
 
-- Titulos sao inferidos comparando o tamanho da fonte com o corpo do
-  texto do documento — PDFs com tipografia muito incomum podem sair com
-  nivel de titulo errado.
 - Listas so sao detectadas quando o PDF realmente embute um caractere de
-  marcador (`•`, `-`, etc.) no texto; alguns geradores de PDF desenham o
-  marcador apenas como grafico vetorial, sem texto associado, e nesse caso
-  o item de lista sai como texto corrido.
+  marcador (`•`, `-`, `◦`, numeros, etc.) no texto; alguns geradores de
+  PDF desenham o marcador apenas como grafico vetorial, sem texto
+  associado, e nesse caso o item de lista sai como texto corrido.
+- Citacoes (`>`) nao sao reconstruidas como blockquote — voltam como
+  paragrafo normal, ja que nao ha um sinal textual confiavel para
+  diferencia-las de um paragrafo comum.
 - Tabelas sao detectadas automaticamente pelo PyMuPDF; tabelas sem bordas
-  visiveis podem nao ser reconhecidas.
+  visiveis podem nao ser reconhecidas (e "tabelas" de 1 coluna ou 1 linha
+  sao ignoradas de proposito, para evitar falsos positivos vindos de
+  linhas/bordas soltas no PDF).
 - PDFs escaneados (imagem, sem camada de texto) nao sao suportados — seria
   necessario OCR, que nao esta incluido nesta primeira versao.
+
+> Essas heuristicas foram validadas convertendo documentos de teste com
+> titulos, listas aninhadas, tabelas, blocos de codigo com indentacao e
+> acentuacao (ç, ã, é, ü) ida e volta (.md → PDF → .md) e comparando o
+> resultado.
