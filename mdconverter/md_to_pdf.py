@@ -15,9 +15,12 @@ from __future__ import annotations
 
 import datetime as _dt
 import html
+import logging
 from pathlib import Path
 
 import markdown as _markdown
+
+logging.getLogger("xhtml2pdf").setLevel(logging.ERROR)
 
 STYLES_DIR = Path(__file__).parent / "styles"
 DEFAULT_CSS = STYLES_DIR / "default.css"

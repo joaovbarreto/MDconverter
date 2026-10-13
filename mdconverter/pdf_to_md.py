@@ -2,7 +2,7 @@
 
 O objetivo principal e reduzir o consumo de tokens ao enviar o conteudo
 para uma LLM, entao priorizamos texto limpo em vez de reproduzir o
-layout do PDF pixel a pixel. Usamos o PyMuPDF (fitz) para:
+layout do PDF pixel a pixel. Usamos o PyMuPDF para:
 
 - extrair o texto por blocos, junto do tamanho de fonte de cada trecho;
 - inferir titulos (#, ##, ###) comparando o tamanho da fonte com o corpo
@@ -18,7 +18,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-import fitz  # PyMuPDF
+import pymupdf
 
 _BULLET_PREFIXES = ("- ", "* ", "• ", "● ", "▪ ", "◦ ", "○ ", "▫ ")
 _BULLET_ONLY_RE = re.compile(r"^[\-\*•●○◦▪▫■❖‣∙·]+$")
@@ -31,7 +31,7 @@ _PAGE_NUMBER_RE = re.compile(
 _MONOSPACE_HINTS = ("mono", "courier", "consolas", "menlo", "cascadia")
 
 
-def _dominant_font_size(doc: "fitz.Document") -> float:
+def _dominant_font_size(doc: "pymupdf.Document") -> float:
     sizes: Counter[float] = Counter()
     for page in doc:
         for block in page.get_text("dict")["blocks"]:
@@ -94,7 +94,7 @@ def _table_to_markdown(table_rows: list[list[str]]) -> str:
     return "\n".join(lines)
 
 
-def _extract_tables(page: "fitz.Page") -> list[tuple[fitz.Rect, str]]:
+def _extract_tables(page: "pymupdf.Page") -> list[tuple[pymupdf.Rect, str]]:
     tables_out = []
     finder = getattr(page, "find_tables", None)
     if finder is None:
@@ -112,7 +112,7 @@ def _extract_tables(page: "fitz.Page") -> list[tuple[fitz.Rect, str]]:
             continue  # provavelmente um falso positivo (linhas/bordas soltas)
         markdown_table = _table_to_markdown(rows)
         if markdown_table:
-            tables_out.append((fitz.Rect(table.bbox), markdown_table))
+            tables_out.append((pymupdf.Rect(table.bbox), markdown_table))
     return tables_out
 
 
@@ -125,7 +125,7 @@ def _flush_code_buffer(out_lines: list[str], code_buffer: list[str]) -> None:
     code_buffer.clear()
 
 
-def _page_to_markdown(page: "fitz.Page", body_size: float) -> str:
+def _page_to_markdown(page: "pymupdf.Page", body_size: float) -> str:
     tables = _extract_tables(page)
     table_rects = [rect for rect, _ in tables]
 
@@ -144,7 +144,7 @@ def _page_to_markdown(page: "fitz.Page", body_size: float) -> str:
     for block in blocks:
         if block.get("type") != 0:
             continue
-        block_rect = fitz.Rect(block["bbox"])
+        block_rect = pymupdf.Rect(block["bbox"])
         if any(block_rect.intersects(rect) for rect in table_rects):
             continue  # sera inserida como evento "table" separadamente
 
@@ -303,7 +303,7 @@ def extract_markdown(input_path: Path, *, page_separators: bool = False) -> tupl
     Nao inclui titulo de arquivo nem grava nada em disco -- isso fica por
     conta de quem chama (convert_pdf_file ou uma fusao de varios PDFs).
     """
-    doc = fitz.open(str(input_path))
+    doc = pymupdf.open(str(input_path))
     try:
         body_size = _dominant_font_size(doc)
         pages_md = []

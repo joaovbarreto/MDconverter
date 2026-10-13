@@ -1,6 +1,6 @@
 Markdown>=3.6
 Pygments>=2.17
-PyMuPDF>=1.24
+PyMuPDF>=1.24.3
 weasyprint>=62.0
 xhtml2pdf>=0.2.15
 

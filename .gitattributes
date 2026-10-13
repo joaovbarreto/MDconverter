@@ -1,0 +1,4 @@
+# Garante que os launchers funcionem no Windows (.bat) e no Linux/Mac (.sh)
+*.bat text eol=crlf
+*.sh  text eol=lf
+*.py  text eol=lf

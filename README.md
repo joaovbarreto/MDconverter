@@ -1,184 +1,95 @@
 # MDconverter
 
-Ferramenta local e offline para converter **PDF ⇄ Markdown** (e tambem
-Word, Excel/CSV, HTML, TXT e RTF → Markdown), com um layout de PDF
-cuidado (tipografia, cores, tabelas, blocos de codigo, numeracao de
-pagina).
+Conversor **local e offline** entre documentos e Markdown, feito para economizar tokens em LLMs:
 
-Motivacao: enviar `.md` para uma LLM consome muito menos tokens do que
-enviar `.pdf`, e quando alguem pede um documento "bonito" para ler, e
-melhor gerar o `.md` com a LLM e converter para PDF localmente do que
-pedir para a LLM tentar gerar o PDF direto.
+- **Para a LLM:** envie `.md` em vez de PDF/Word/Excel. O texto fica limpo e consome muito menos tokens.
+- **Para pessoas:** peça à LLM para gerar o `.md` e converta para um **PDF bonito** localmente, em vez de pedir o PDF direto.
 
-## Estrutura de pastas
+Nada sai da sua máquina: sem nuvem, sem API, sem conta.
 
-```
-MDconverter/
-├── MDtoPDF/             <- solte .md aqui e rode o conversor
-│   ├── convert.py
-│   ├── run.bat / run.sh
-│   └── PDFs/             <- saida: PDF gerado + .md original movidos para ca
-├── PDFtoMD/              <- solte .pdf aqui e rode o conversor (1 PDF -> 1 .md)
-│   ├── convert.py
-│   ├── run.bat / run.sh
-│   └── MDs/               <- saida: .md gerado + PDF original movidos para ca
-├── allPDFtoMD/           <- solte varios .pdf aqui e rode o conversor
-│   ├── convert.py         <- junta TODOS os pdfs da raiz em 1 unico .md
-│   ├── run.bat / run.sh
-│   └── MDs/               <- saida: .md combinado + PDFs originais movidos para ca
-├── ALLtoMD/              <- solte pdf/docx/xlsx/csv/html/txt/rtf aqui
-│   ├── convert.py         <- 1 arquivo (qualquer formato acima) -> 1 .md
-│   ├── run.bat / run.sh
-│   └── MDs/               <- saida: .md gerado + arquivo original movidos para ca
-├── watch_all.py           <- monitor unico: fica na raiz observando as 4 pastas acima
-├── watch_all.bat / .sh
-├── mdconverter/           <- pacote com a logica de conversao (compartilhada)
-├── requirements.txt
-├── install.bat / install.sh
-└── build_executables.py   <- opcional: gera .exe/binario standalone
-```
+![Exemplo de PDF gerado a partir de Markdown](docs/preview.png)
 
-Regra fixa: **tudo que estiver na raiz de `MDtoPDF/` ou `PDFtoMD/`** e
-convertido quando voce roda o script, e tanto o arquivo original quanto o
-resultado vao parar juntos na subpasta de saida (`PDFs/` ou `MDs/`),
-deixando a raiz limpa para o proximo lote.
+## Como funciona
 
-## Instalacao
+Cada ferramenta é uma pasta. **Solte os arquivos na raiz da pasta, rode o conversor, e o resultado aparece na subpasta de saída.** O arquivo original também é movido para lá, deixando a raiz limpa para o próximo lote.
 
-Requer Python 3.10+.
+| Pasta | Entrada | Saída (na subpasta) |
+|---|---|---|
+| `MDtoPDF/` | `.md` | PDF com layout cuidado → `PDFs/` |
+| `PDFtoMD/` | `.pdf` | 1 `.md` por PDF → `MDs/` |
+| `allPDFtoMD/` | vários `.pdf` | **1 único `.md`** com todos juntos → `MDs/` |
+| `ALLtoMD/` | `.pdf` `.docx` `.xlsx` `.csv` `.html` `.txt` `.rtf` | 1 `.md` por arquivo → `MDs/` |
 
-```bash
-# Windows: clique duas vezes em install.bat
-# Linux/Mac:
-./install.sh
-```
+Em vez de rodar cada pasta, o **`watch_all`** fica aberto na raiz, observa as quatro pastas e converte sozinho qualquer arquivo novo.
 
-Isso instala:
-- `Markdown` + `Pygments` — parser de Markdown com tabelas, code blocks, etc.
-- `PyMuPDF` — extracao de texto/tabelas do PDF.
-- `weasyprint` — motor principal de geracao de PDF (melhor tipografia).
-- `xhtml2pdf` — motor de fallback, puro Python, usado automaticamente se o
-  WeasyPrint nao conseguir carregar (ex.: falta o runtime do GTK no Windows).
-- `python-docx`, `openpyxl`, `markdownify`, `striprtf` — usados pelo
-  `ALLtoMD/` para ler `.docx`, `.xlsx`, `.html` e `.rtf`.
+## Instalação
 
-> **Nota Windows/WeasyPrint:** o WeasyPrint depende de bibliotecas nativas
-> (Pango/Cairo/GDK-Pixbuf). Se voce nao instalar o
-> [GTK runtime](https://weasyprint.readthedocs.io/en/stable/first_steps.html#windows),
-> o programa detecta isso automaticamente e usa o `xhtml2pdf` no lugar —
-> o layout fica mais simples, mas tudo continua funcionando sem precisar
-> instalar nada extra.
+Requer **Python 3.10+**.
+
+- **Windows:** dê dois cliques em `install.bat`
+- **Linux/Mac:** `./install.sh`
+
+(Ou manualmente: `pip install -r requirements.txt`.)
 
 ## Uso
 
-### Markdown → PDF
+Dentro de qualquer pasta de conversão, dê dois cliques em `run.bat` (Windows) ou rode `./run.sh` (Linux/Mac). Também funciona com `python <pasta>/convert.py`.
 
-1. Coloque arquivos `.md` na raiz de `MDtoPDF/`.
-2. Rode `MDtoPDF/run.bat` (Windows) ou `MDtoPDF/run.sh` (Linux/Mac), ou
-   `python MDtoPDF/convert.py`.
-3. Os PDFs (com layout, tabelas, code blocks e numeracao de pagina) e os
-   `.md` originais aparecem em `MDtoPDF/PDFs/`.
-
-### PDF → Markdown (um arquivo por vez)
-
-1. Coloque arquivos `.pdf` na raiz de `PDFtoMD/`.
-2. Rode `PDFtoMD/run.bat`, `PDFtoMD/run.sh` ou `python PDFtoMD/convert.py`.
-3. Os `.md` (titulos, listas, tabelas e blocos de codigo detectados
-   automaticamente) e os `.pdf` originais aparecem em `PDFtoMD/MDs/`.
-
-### Vários PDFs → um único Markdown (allPDFtoMD)
-
-Quando voce quer consolidar varios PDFs relacionados em um so `.md` (por
-exemplo, para mandar tudo de uma vez para uma LLM):
-
-1. Coloque os `.pdf` na raiz de `allPDFtoMD/`.
-2. Rode `allPDFtoMD/run.bat`, `allPDFtoMD/run.sh` ou
-   `python allPDFtoMD/convert.py`.
-3. Um unico `combinado_<data>_<hora>.md` e os `.pdf` originais aparecem em
-   `allPDFtoMD/MDs/`. Cada PDF vira uma secao `## <nome do arquivo>`
-   dentro do Markdown final, na ordem alfabetica dos nomes de arquivo.
-
-### Outros formatos → Markdown (ALLtoMD)
-
-Quando o arquivo nao e PDF: `.docx`, `.xlsx`/`.csv`, `.html`/`.htm`,
-`.txt` ou `.rtf` (PDF tambem funciona aqui, se quiser misturar tudo na
-mesma pasta).
-
-1. Coloque os arquivos na raiz de `ALLtoMD/`.
-2. Rode `ALLtoMD/run.bat`, `ALLtoMD/run.sh` ou `python ALLtoMD/convert.py`.
-3. Um `.md` para cada arquivo (planilhas viram tabelas Markdown, Word
-   preserva titulos/listas/tabelas) e os arquivos originais aparecem em
-   `ALLtoMD/MDs/`.
-
-### Monitor único (watch_all)
-
-Em vez de entrar em cada pasta e rodar o conversor manualmente, de dois
-cliques em `watch_all.bat` (Windows) ou rode `watch_all.sh` /
-`python watch_all.py` (Linux/Mac). Ele fica na raiz do projeto,
-verificando `MDtoPDF/`, `PDFtoMD/`, `allPDFtoMD/` e `ALLtoMD/` a cada
-poucos segundos e converte automaticamente qualquer arquivo novo que
-aparecer em alguma delas — basta jogar os arquivos nas pastas certas e
-esperar.
+Para o monitor único:
 
 ```bash
 python watch_all.py               # fica rodando, checa a cada 3s (Ctrl+C para parar)
-python watch_all.py --once        # roda uma unica passada nas 4 pastas e sai
-python watch_all.py --interval 10 # muda o intervalo de checagem
+python watch_all.py --once        # uma única passada e sai
+python watch_all.py --interval 10 # muda o intervalo
 ```
 
-### Gerando um executavel standalone (opcional)
+No Windows, `watch_all.bat`; no Linux/Mac, `./watch_all.sh`.
 
-Se quiser rodar sem precisar ter Python instalado no dia a dia:
+Na pasta [`exemplos/`](exemplos/) há arquivos prontos para testar (Markdown, Word e Excel), inclusive o PDF gerado da imagem acima.
+
+### Detalhes por ferramenta
+
+**MDtoPDF** — Markdown completo: títulos, listas (inclusive aninhadas com 2 espaços), tabelas, blocos de código com realce de sintaxe, citações, links e numeração de página.
+
+**PDFtoMD / ALLtoMD (PDF)** — títulos (por tamanho de fonte), listas com marcador e numeradas (com aninhamento), tabelas na posição original, blocos de código com indentação e remoção de número de página/rodapé.
+
+**allPDFtoMD** — cada PDF vira uma seção `## nome-do-arquivo` dentro de um `combinado_<data>_<hora>.md`, em ordem alfabética.
+
+**ALLtoMD** — `.docx` (títulos, listas, tabelas), `.xlsx` (cada aba vira uma tabela), `.csv`, `.html`, `.txt` e `.rtf`.
+
+Se um arquivo falha (corrompido, por exemplo), só ele é reportado e fica na raiz; o restante do lote segue normalmente.
+
+## Observações importantes
+
+**PDF no Windows:** o motor principal (WeasyPrint) depende de bibliotecas gráficas (GTK) que normalmente **não** estão instaladas no Windows. Sem elas, o programa usa **automaticamente** um motor alternativo (`xhtml2pdf`, puro Python). O PDF sai com o mesmo estilo, só sem a numeração de página. Para ter o layout completo, instale o [GTK runtime](https://weasyprint.readthedocs.io/en/stable/first_steps.html#windows).
+
+**Executável sem Python (opcional):**
 
 ```bash
 pip install pyinstaller
 python build_executables.py
 ```
 
-Isso gera um `.exe` (ou binario sem extensao no Linux/Mac) dentro de cada
-pasta (`MDtoPDF/`, `PDFtoMD/`, `allPDFtoMD/`, `ALLtoMD/`) e um `watch_all`
-na raiz. Precisa ser rodado no mesmo sistema operacional de destino (o
-PyInstaller nao faz cross-compilation).
+Gera um executável em cada pasta e o `watch_all` na raiz. Precisa ser executado no mesmo sistema operacional de destino.
 
-## Limitacoes conhecidas (PDF → Markdown)
+## Limitações conhecidas
 
-A extracao de PDF e heuristica (baseada em tamanho de fonte, negrito e
-posicao do texto). Testado e funcionando bem: titulos por tamanho de
-fonte, listas com marcador (incluindo listas aninhadas, por indentacao),
-listas numeradas, tabelas na posicao correta do documento, blocos de
-codigo (com indentacao preservada, via deteccao de fonte monoespaçada) e
-numeros de pagina/rodape filtrados automaticamente. Ainda assim:
+PDF → Markdown é heurístico (tamanho de fonte, posição, fonte monoespaçada):
 
-- Listas so sao detectadas quando o PDF realmente embute um caractere de
-  marcador (`•`, `-`, `◦`, numeros, etc.) no texto; alguns geradores de
-  PDF desenham o marcador apenas como grafico vetorial, sem texto
-  associado, e nesse caso o item de lista sai como texto corrido.
-- Citacoes (`>`) nao sao reconstruidas como blockquote — voltam como
-  paragrafo normal, ja que nao ha um sinal textual confiavel para
-  diferencia-las de um paragrafo comum.
-- Tabelas sao detectadas automaticamente pelo PyMuPDF; tabelas sem bordas
-  visiveis podem nao ser reconhecidas (e "tabelas" de 1 coluna ou 1 linha
-  sao ignoradas de proposito, para evitar falsos positivos vindos de
-  linhas/bordas soltas no PDF).
-- PDFs escaneados (imagem, sem camada de texto) nao sao suportados — seria
-  necessario OCR, que nao esta incluido nesta primeira versao.
+- Listas só são detectadas se o PDF embute o caractere do marcador (`•`, `-`, `◦`, números). Alguns geradores desenham o marcador como gráfico e a lista sai como texto corrido.
+- Citações (`>`) voltam como parágrafo normal.
+- Tabelas sem bordas visíveis podem não ser reconhecidas.
+- **PDFs escaneados (imagem) não são suportados**: seria necessário OCR.
+- `.docx`: imagens e negrito/itálico dentro do parágrafo não são preservados. `.xlsx`: fórmulas são lidas pelo valor calculado. `.html`: páginas que dependem de JavaScript podem sair incompletas. `.rtf`: só o texto.
 
-> Essas heuristicas foram validadas convertendo documentos de teste com
-> titulos, listas aninhadas, tabelas, blocos de codigo com indentacao e
-> acentuacao (ç, ã, é, ü) ida e volta (.md → PDF → .md) e comparando o
-> resultado.
+## Estrutura do projeto
 
-## Limitacoes conhecidas (ALLtoMD)
-
-- `.docx`: paragrafos, titulos (estilos "Heading 1-6"), listas e tabelas
-  sao convertidos; imagens, caixas de texto e formatacao de caractere
-  (negrito/italico dentro do paragrafo) nao sao preservados nesta
-  primeira versao.
-- `.xlsx`: cada aba vira uma tabela Markdown; formulas sao lidas pelo
-  valor calculado (nao pela formula em si); formatacao visual (cores,
-  graficos) nao e preservada.
-- `.html`: convertido via `markdownify`, que cobre bem HTML "de
-  documento" (textos, listas, tabelas, links); paginas muito dependentes
-  de JavaScript/CSS para exibir conteudo podem sair incompletas.
-- `.rtf`: extrai o texto; formatacao rica (cores, fontes) nao e
-  preservada.
+```
+MDconverter/
+├── MDtoPDF/  PDFtoMD/  allPDFtoMD/  ALLtoMD/   <- pastas de trabalho (cada uma com convert.py, run.bat, run.sh e subpasta de saída)
+├── watch_all.py / .bat / .sh                   <- monitor único
+├── mdconverter/                                <- lógica de conversão compartilhada
+├── exemplos/                                   <- arquivos de teste
+├── requirements.txt, install.bat, install.sh
+└── build_executables.py                        <- gera executáveis (opcional)
+```
