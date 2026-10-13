@@ -1,0 +1,11 @@
+Markdown>=3.6
+Pygments>=2.17
+PyMuPDF>=1.24.3
+weasyprint>=62.0
+xhtml2pdf>=0.2.15
+
+# Usados pelo ALLtoMD/ (conversao de outros formatos para Markdown)
+python-docx>=1.1.0
+openpyxl>=3.1.0
+markdownify>=0.13.0
+striprtf>=0.0.26

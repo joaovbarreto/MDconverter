@@ -1,0 +1,113 @@
+/* Estilo simplificado usado pelo motor de fallback (xhtml2pdf).
+   O parser de CSS do xhtml2pdf nao suporta @page aninhado (ex.: contadores
+   de pagina via @bottom-center), entao esta folha evita esses recursos e
+   mantem apenas o que o motor realmente entende. */
+
+@page {
+    size: A4;
+    margin: 2.4cm 2.2cm 2.6cm 2.2cm;
+}
+
+body {
+    font-family: "Times New Roman", serif;
+    font-size: 11.5pt;
+    line-height: 1.5;
+    color: #1f2328;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: Helvetica, Arial, sans-serif;
+    color: #14213d;
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 22pt;
+    border-bottom: 2pt solid #fca311;
+    padding-bottom: 6px;
+}
+
+h2 {
+    font-size: 16pt;
+    border-bottom: 1pt solid #d9dce1;
+    padding-bottom: 4px;
+}
+
+h3 {
+    font-size: 13pt;
+}
+
+p {
+    margin-bottom: 10px;
+    text-align: justify;
+}
+
+a {
+    color: #d0491d;
+}
+
+code, pre {
+    font-family: Courier, monospace;
+    font-size: 9.5pt;
+}
+
+code {
+    background-color: #f2f3f5;
+    padding: 1px 4px;
+}
+
+pre {
+    background-color: #f6f8fa;
+    color: #1f2328;
+    padding: 10px;
+    border: 0.75pt solid #d9dce1;
+}
+
+pre code {
+    background-color: transparent;
+    color: inherit;
+}
+
+blockquote {
+    margin: 10px 0;
+    padding: 6px 14px;
+    border-left: 3pt solid #fca311;
+    background-color: #fff8ee;
+    color: #4a5063;
+}
+
+table {
+    width: 100%;
+    margin: 10px 0;
+    font-size: 10pt;
+}
+
+th, td {
+    border: 1pt solid #d9dce1;
+    padding: 5px 7px;
+    text-align: left;
+}
+
+th {
+    background-color: #14213d;
+    color: white;
+}
+
+ul, ol {
+    margin-bottom: 10px;
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 4px;
+}
+
+hr {
+    border: none;
+    border-top: 1pt solid #d9dce1;
+    margin: 20px 0;
+}
+
+img {
+    max-width: 100%;
+}
